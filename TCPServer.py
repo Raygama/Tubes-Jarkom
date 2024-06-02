@@ -5,7 +5,6 @@ def tcp_server():
     serverPort = 80
     serverSocket = socket(AF_INET, SOCK_STREAM)
     serverSocket.bind((serverHost, serverPort))
-    serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     serverSocket.listen(1)
     print('The Server is Ready to Receive')
 
