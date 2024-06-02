@@ -3,7 +3,7 @@ import sys
 
 def main():
     if len(sys.argv) < 4:
-        print("Usage: client.py server_host server_port filename")
+        print("Usage: TCPClient.py server_host server_port filename")
         return
 
     server_host = sys.argv[1]

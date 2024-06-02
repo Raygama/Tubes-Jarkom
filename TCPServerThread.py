@@ -1,62 +1,52 @@
-from socket import *
+import socket
 import threading
 
-# Fungsi yang akan dijalankan oleh setiap thread untuk menangani koneksi dengan client
-def handle_client(connectionSocket):
+serverHost = '127.0.0.1'
+serverPort = 12000
+
+def handle_client(connectionSocket, addr):
     try:
-        # Menerima pesan dari client
+        # Menerima message
         message = connectionSocket.recv(1024).decode()
-        print("Message from client: " + message)
-        message_parts = message.split()
-        request_method = message_parts[0]
-        request_path = message_parts[1]
+        file = message.split()[1]
+        r = open(file[1:])
+        content = r.read()
+        r.close()
+        
+        response_header = "HTTP/1.1 200 OK\r\n"
+        content_type_header = "Content-Type: text/html\r\n"
+        response = response_header + content_type_header + "\r\n" + content + "\r\n"
+        connectionSocket.sendall(response.encode())
 
-        # Hanya menerima request GET file html saja
-        if request_method == 'GET':
-            try:
-                # Membuka file yang diminta
-                file = open(request_path[1:], 'rb')
-                file_content = file.read()
-                file.close()
-                response_header = "HTTP/1.1 200 OK\r\n"
-                content_type_header = "Content-Type: text/html\r\n"
-                content_length_header = "Content-Length: " + str(len(file_content)) + "\r\n"
-                response = response_header + content_type_header + content_length_header + "\r\n"
-                response_bytes = bytes(response, 'utf-8') + file_content
-                # Mengirim response ke client
-                connectionSocket.sendall(response_bytes)
-            except FileNotFoundError:
-                # Mengirim response 404 jika file tidak ditemukan
-                response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>\r\n"
-                connectionSocket.sendall(response.encode())
-        else:
-            # Mengirim response 400 jika request tidak valid
-            response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\n\r\n<html><body><h1>400 Bad Request: Invalid file type</h1></body></html>\r\n"
-            connectionSocket.sendall(response.encode())
+        print("Messaged successfully sent")
+        connectionSocket.close()
 
+    except IndexError:
+        print("Waiting for request from client...")
+        
     except IOError:
-        # Mengirim response 404 jika terjadi error saat mengakses file
-        connectionSocket.send("HTTP/1/1 404 Not Found\r\nContent-Type: text/html\r\n\r\n".encode())
-        connectionSocket.send("<html><body><h1>404 Not Found</h1></body></html>\r\n".encode())
+        r = open("./error.html", "r")
+        content = r.read()
+        r.close()
 
-    # Menutup koneksi dengan client
-    connectionSocket.close()
+        response_header = "HTTP/1.1 200 OK\r\n"
+        content_type_header = "Content-Type: text/html\r\n"
+        response = response_header + content_type_header + "\r\n" + content + "\r\n"
+        connectionSocket.sendall(response.encode())
 
-def tcp_server():
-    serverHost = 'localhost'
-    serverPort = 80
-    serverSocket = socket(AF_INET, SOCK_STREAM)
-    serverSocket.bind((serverHost, serverPort))
-    serverSocket.listen(5)  # Mendengarkan hingga 5 koneksi simultan
-    print('The Server is Ready to Receive')
+def main():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((serverHost, serverPort))
+    server.listen()
+    print(f"The Server is Ready to Receive on {serverHost}:{serverPort}")
 
     while True:
-        # Menerima koneksi dari client
-        connectionSocket, addr = serverSocket.accept()
+        connectionSocket, addr = server.accept()
+        
         print(f"Connection established with {addr}")
-        # Membuat thread baru untuk menangani koneksi dengan client
-        client_thread = threading.Thread(target=handle_client, args=(connectionSocket,))
-        client_thread.start()
+        thread = threading.Thread(target=handle_client, args=(connectionSocket, addr))
+        thread.start()
+        print(f"Active connections {threading.active_count() - 1}")
 
 if __name__ == "__main__":
-    tcp_server()
+    main()
